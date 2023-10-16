@@ -11,7 +11,7 @@ class Database {
         Database();
         ~Database();
 
-        void connect();
+        void connect(const std::string& dbname, const std::string& user, const std::string& password, const std::string& host, uint8_t port);
         void disconnect();
 
         std::optional<nlohmann::json> fetchAllBlocks();
@@ -23,5 +23,4 @@ class Database {
         std::unique_ptr<pqxx::connection> conn;
         bool is_connected;
 
-        std::string loadConfig(const std::string& path);
 };

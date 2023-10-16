@@ -15,11 +15,17 @@ Database::~Database() {}
 /**
  * Connects to a postgres database instance
 */
-void Database::connect()
+void Database::connect(const std::string& dbname, const std::string& user, const std::string& password, const std::string& host, uint8_t port)
 {
     try
     {
-        std::string connection_string = "dbname=postgres user=postgres password=mysecretpassword host=127.0.0.1 port=5432"; //this->loadConfig("../config/db_config.cfg")
+        const std::string connection_string =
+        "dbname=" + dbname +
+        " user=" + user +
+        " password=" + password +
+        " host=" + host +
+        " port=" + std::to_string(port);
+      
         conn = std::make_unique<pqxx::connection>(connection_string);
     }
     catch (std::exception &e)
@@ -37,17 +43,6 @@ void Database::disconnect()
     {
         conn->close();
     }
-}
-
-/**
- * Load the configuration file
-*/
-std::string Database::loadConfig(const std::string &path)
-{
-    std::ifstream cfg_file(path);
-    std::string conn_str;
-    std::getline(cfg_file, conn_str);
-    return conn_str;
 }
 
 /**
