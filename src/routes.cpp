@@ -17,7 +17,7 @@ ZCashApi::~ZCashApi() {}
  * Initialize the API. This method makes a call to also initialize the database
  * and setup routes.
 */
-void ZCashApi::init(crow::SimpleApp &app)
+void ZCashApi::init(crow::SimpleApp &app, const std::string& dbname, const std::string& user, const std::string& password, const std::string& host, uint8_t port)
 {
     if (this->isInitiated)
     {
@@ -25,7 +25,7 @@ void ZCashApi::init(crow::SimpleApp &app)
     }
 
     this->isInitiated = true;
-    db.connect();
+    db.connect(dbname, user, password, host, port);
     this->setup_routes(app);
 }
 
