@@ -87,7 +87,11 @@ void ZCashApi::fetch_all_transactions_route(const crow::request &req, crow::resp
 void ZCashApi::set_common_headers(crow::response &res)
 {
     res.set_header("Content-Type", "application/json");
-}
+         // Set CORS headers
+        res.set_header("Access-Control-Allow-Origin", "*"); // Allow all origins (Change * to specific origin if needed)
+        res.set_header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS"); // Add other methods as needed
+};
 
 /**
  * Sets up API routes.
