@@ -1,5 +1,7 @@
 #include <string>
 #include <pqxx/pqxx>
+#include <mutex>
+#include <queue>
 #include <nlohmann/json.hpp>
 #include <memory>
 #include <fstream>
@@ -11,7 +13,7 @@ class Database {
         Database();
         ~Database();
 
-        void connect(const std::string& dbname, const std::string& user, const std::string& password, const std::string& host, uint8_t port);
+        void connect(const std::string& dbname, const std::string& user, const std::string& password, const std::string& host, std::string port);
         void disconnect();
 
         std::optional<nlohmann::json> fetchAllBlocks();
@@ -20,7 +22,11 @@ class Database {
         json fetchBlocksSinceHeight(uint32_t lastBlockHeight);
     
     private:
-        std::unique_ptr<pqxx::connection> conn;
         bool is_connected;
+        std::queue<std::unique_ptr<pqxx::connection>> connectionPool;
+        std::mutex poolMutex;
+            void ShutdownConnections();
+    bool ReleaseConnection(std::unique_ptr<pqxx::connection> conn);
+    std::unique_ptr<pqxx::connection> GetConnection();
 
 };

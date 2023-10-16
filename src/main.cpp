@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     std::string db_password{""};
     std::string db_user{""};
     std::string db_host{""};
-    uint8_t db_port{0};
+    std::string db_port{""};
 
     //  Check for the required arguments and define the InitConfig fields
     for (int i = 1; i < argc; i++)
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
         }
         else if (arg == "--dbport" && i + 1 < argc)
         {
-            db_port = std::stoi(argv[++i]);
+            db_port = argv[++i];
         }
         else
         {

@@ -5,7 +5,7 @@ class ZCashApi {
     public:
         ZCashApi(Database& database);
         ~ZCashApi();
-        void init(crow::SimpleApp &app, const std::string& dbname, const std::string& user, const std::string& password, const std::string& host, uint8_t port);
+        void init(crow::SimpleApp &app, const std::string& dbname, const std::string& user, const std::string& password, const std::string& host, std::string port);
         void hello_route(const crow::request& req, crow::response& res);
         void fetch_all_blocks_route(const crow::request& req, crow::response& res);
         void fetch_all_transactions_route(const crow::request& req, crow::response& res);
