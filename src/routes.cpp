@@ -88,6 +88,62 @@ void ZCashApi::fetch_all_transactions_route(const crow::request &req, crow::resp
     }
 }
 
+// Fetch blocks with pagination
+void ZCashApi::fetch_paginated_blocks_route(const crow::request &req, crow::response &res)
+{
+    int page = std::stoi(req.url_params.get("page") ? req.url_params.get("page") : "1");
+    int limit = std::stoi(req.url_params.get("limit") ? req.url_params.get("limit") : "50");
+
+    try
+    {
+        std::optional<json> result = db.fetchPaginatedBlocks(page, limit);
+
+        if (!result.has_value())
+        {
+            throw std::runtime_error("fetch_paginated_blocks_route: NULL");
+        }
+
+        json blocks = result.value();
+        std::cout << blocks << std::endl;
+        res.code = 200;
+        res.write(blocks.dump());
+    }
+    catch (std::exception &e)
+    {
+        std::cout << e.what() << std::endl;
+        res.code = 500;
+        res.write(json(nullptr));
+    }
+}
+
+// Fetch transactions with pagination
+void ZCashApi::fetch_paginated_transactions_route(const crow::request &req, crow::response &res)
+{
+    int page = std::stoi(req.url_params.get("page") ? req.url_params.get("page") : "1");
+    int limit = std::stoi(req.url_params.get("limit") ? req.url_params.get("limit") : "50");
+
+    try
+    {
+        std::optional<json> result = db.fetchPaginatedTransactions(page, limit);
+
+        if (!result.has_value())
+        {
+            throw std::runtime_error("fetch_paginated_transactions_route: NULL");
+        }
+
+        json transactions = result.value();
+        std::cout << transactions << std::endl;
+        res.code = 200;
+        res.write(transactions.dump());
+    }
+    catch (std::exception &e)
+    {
+        std::cout << e.what() << std::endl;
+        res.code = 500;
+        res.write(json(nullptr));
+    }
+}
+
 // Private
 
 /**
@@ -96,10 +152,9 @@ void ZCashApi::fetch_all_transactions_route(const crow::request &req, crow::resp
 void ZCashApi::set_common_headers(crow::response &res)
 {
     res.set_header("Content-Type", "application/json");
-    res.set_header("Access-Control-Allow-Origin", "*"); 
-    res.set_header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    res.set_header("Access-Control-Allow-Origin", "*");
     res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-};
+}
 
 /**
  * Sets up API routes.
@@ -125,6 +180,21 @@ void ZCashApi::setup_routes(crow::SimpleApp &app)
         crow::response res;
         this->set_common_headers(res);
         this->fetch_all_transactions_route(req, res);
+        return res; });
+
+    CROW_ROUTE(app, "/blocks").methods(crow::HTTPMethod::GET)([this](const crow::request &req)
+                                                              {
+        crow::response res;
+        this->set_common_headers(res);
+        this->fetch_paginated_blocks_route(req, res);
+        return res; });
+
+    // Route for paginated transactions
+    CROW_ROUTE(app, "/transactions").methods(crow::HTTPMethod::GET)([this](const crow::request &req)
+                                                                    {
+        crow::response res;
+        this->set_common_headers(res);
+        this->fetch_paginated_transactions_route(req, res);
         return res; });
 }
 

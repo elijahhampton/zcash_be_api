@@ -9,6 +9,8 @@ class ZCashApi {
         void hello_route(const crow::request& req, crow::response& res);
         void fetch_all_blocks_route(const crow::request& req, crow::response& res);
         void fetch_all_transactions_route(const crow::request& req, crow::response& res);
+        void fetch_paginated_transactions_route(const crow::request &req, crow::response &res);
+        void fetch_paginated_blocks_route(const crow::request &req, crow::response &res);
 
     private:
         Database &db;

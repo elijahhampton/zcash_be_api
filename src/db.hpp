@@ -2,7 +2,7 @@
 #include <pqxx/pqxx>
 #include <mutex>
 #include <queue>
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 #include <memory>
 #include <fstream>
 
@@ -18,8 +18,8 @@ class Database {
 
         std::optional<nlohmann::json> fetchAllBlocks();
         json fetchAllTransactions();
-        json fetchTransactionsSinceHeight(uint32_t lastBlockHeight);
-        json fetchBlocksSinceHeight(uint32_t lastBlockHeight);
+        std::optional<json> fetchPaginatedTransactions(int page, int limit);
+        std::optional<json> fetchPaginatedBlocks(int page, int limit);
     
     private:
         bool is_connected;
