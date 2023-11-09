@@ -8,7 +8,7 @@ int main() {
     crow::SimpleApp app;
     try {
         api.init(app, Config::getDatabaseName(), Config::getDatabaseUser(), Config::getDatabasePassword(), Config::getDatabaseHost(), Config::getDatabasePort());
-        app.port(4000).multithreaded().run();
+        app.port(8000).multithreaded().run();
     } catch(const std::exception& e) {
         std::cout << "Trouble starting API: " << std::endl;
         std::cout << e.what() << std::endl;
