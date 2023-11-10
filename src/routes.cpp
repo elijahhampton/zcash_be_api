@@ -154,6 +154,8 @@ void ZCashApi::set_common_headers(crow::response &res)
     res.set_header("Content-Type", "application/json");
     res.set_header("Access-Control-Allow-Origin", "*");
     res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set_header("Access-Control-Allow-Headers", "Content-Type, Accept");
+    res.set_header("Access-Control-Max-Age", "3600");
 }
 
 /**
@@ -166,6 +168,7 @@ void ZCashApi::setup_routes(crow::SimpleApp &app)
         crow::response res;
         this->set_common_headers(res);
         this->hello_route(req, res);
+        res.end();
         return res; });
 
     CROW_ROUTE(app, "/blocks/all").methods(crow::HTTPMethod::GET)([this](const crow::request &req)
@@ -173,6 +176,7 @@ void ZCashApi::setup_routes(crow::SimpleApp &app)
         crow::response res;
         this->set_common_headers(res);
         this->fetch_all_blocks_route(req, res);
+        res.end();
         return res; });
 
     CROW_ROUTE(app, "/transactions/all").methods(crow::HTTPMethod::GET)([this](const crow::request &req)
@@ -180,6 +184,7 @@ void ZCashApi::setup_routes(crow::SimpleApp &app)
         crow::response res;
         this->set_common_headers(res);
         this->fetch_all_transactions_route(req, res);
+        res.end();
         return res; });
 
     CROW_ROUTE(app, "/blocks").methods(crow::HTTPMethod::GET)([this](const crow::request &req)
@@ -187,6 +192,7 @@ void ZCashApi::setup_routes(crow::SimpleApp &app)
         crow::response res;
         this->set_common_headers(res);
         this->fetch_paginated_blocks_route(req, res);
+        res.end();
         return res; });
 
     // Route for paginated transactions
@@ -195,6 +201,7 @@ void ZCashApi::setup_routes(crow::SimpleApp &app)
         crow::response res;
         this->set_common_headers(res);
         this->fetch_paginated_transactions_route(req, res);
+        res.end();
         return res; });
 }
 
