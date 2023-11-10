@@ -5,13 +5,12 @@
 int main() {
     Database database;
     ZCashApi api(database);
-    crow::SimpleApp<crow::CORSHandler> app;
+    crow::App<crow::CORSHandler> app;
 
     try {
         auto& cors = app.get_middleware<crow::CORSHandler>();
 
-         cors
-      .global()
+        cors.global()
         .headers("X-Custom-Header", "Upgrade-Insecure-Requests")
         .methods("POST"_method, "GET"_method)
       .prefix("/cors")

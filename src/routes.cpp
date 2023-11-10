@@ -17,7 +17,7 @@ ZCashApi::~ZCashApi() {}
  * Initialize the API. This method makes a call to also initialize the database
  * and setup routes.
  */
-void ZCashApi::init(crow::SimpleApp &app, const std::string &dbname, const std::string &user, const std::string &password, const std::string &host, std::string port)
+void ZCashApi::init(crow::App<crow::CORSHandler> &app, const std::string &dbname, const std::string &user, const std::string &password, const std::string &host, std::string port)
 {
     if (this->isInitiated)
     {
@@ -161,7 +161,7 @@ void ZCashApi::set_common_headers(crow::response &res)
 /**
  * Sets up API routes.
  */
-void ZCashApi::setup_routes(crow::SimpleApp &app)
+void ZCashApi::setup_routes(crow::App<crow::CORSHandler> &app)
 {
     CROW_ROUTE(app, "/hello").methods(crow::HTTPMethod::GET)([this](const crow::request &req, crow::response &res) {
                 res.add_header("Access-Control-Allow-Origin", "*");
