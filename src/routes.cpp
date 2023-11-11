@@ -202,6 +202,29 @@ void ZCashApi::setup_routes(crow::App<crow::CORSHandler> &app)
         this->fetch_paginated_transactions_route(req, res);
         res.end();
         });
+
+    CROW_ROUTE(app, "/.well-known/pki-validation/<string>").methods(crow::HTTPMethod::GET)([this](const crow::request& req, std::string filename){
+        // Construct the full path to the file on the server
+        std::string full_path = "~/" + filename;
+
+        // Read the file from disk and return it as a response
+        std::ifstream file(full_path, std::ios::binary | std::ios::ate);
+        if(file) {
+            auto length = file.tellg();
+            file.seekg(0, std::ios::beg);
+
+            std::string content(length, '\0');
+            file.read(&content[0], length);
+
+            crow::response resp(content);
+            this->set_common_headers(resp);
+            resp.set_header("Content-Type", "text/plain");
+            return resp;
+        } else {
+            return crow::response(404);
+        }
+    });
+
 }
 
 #endif // ROUTES_HPP
