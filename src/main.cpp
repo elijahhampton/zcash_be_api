@@ -11,12 +11,11 @@ int main() {
         auto& cors = app.get_middleware<crow::CORSHandler>();
 
         cors.global()
-        .headers("X-Custom-Header", "Upgrade-Insecure-Requests")
         .methods("POST"_method, "GET"_method)
-      .prefix("/cors")
-        .origin("ec2-18-222-152-234.us-east-2.compute.amazonaws.com")
-      .prefix("/nocors")
-        .ignore();
+  .prefix("/")
+    .origin("ec2-18-222-152-234.us-east-2.compute.amazonaws.com")
+    .allow_credentials();
+
         
         api.init(app, Config::getDatabaseName(), Config::getDatabaseUser(), Config::getDatabasePassword(), Config::getDatabaseHost(), Config::getDatabasePort());
         app.port(8000).multithreaded().run();

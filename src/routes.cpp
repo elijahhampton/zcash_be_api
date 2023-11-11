@@ -151,6 +151,7 @@ void ZCashApi::fetch_paginated_transactions_route(const crow::request &req, crow
  */
 void ZCashApi::set_common_headers(crow::response &res)
 {
+
     res.set_header("Content-Type", "application/json");
     res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.set_header("Access-Control-Allow-Headers", "Content-Type, Accept");
@@ -170,18 +171,23 @@ void ZCashApi::setup_routes(crow::App<crow::CORSHandler> &app)
         res.end();
     });
 
-    CROW_ROUTE(app, "/blocks/all").methods(crow::HTTPMethod::OPTIONS)([this](const crow::request &req, crow::response &res){
-        res.add_header("Access-Control-Allow-Origin", "*");
-        this->set_common_headers(res);
-        res.end();
+    CROW_ROUTE(app, "/blocks/all").methods(crow::HTTPMethod::OPTIONS)([this](const crow::request &req){
+        CROW_LOG_INFO << "OPTIONS blocks/all";
+        return crow::response(crow::status::OK);
+        
+        // res.add_header("Access-Control-Allow-Origin", "*");
+        // this->set_common_headers(res);
+        // res.end();
     });
 
-    CROW_ROUTE(app, "/blocks/all").methods(crow::HTTPMethod::GET)([this](const crow::request &req, crow::response &res)
+    CROW_ROUTE(app, "/blocks/all").methods(crow::HTTPMethod::GET)([this](const crow::request &req)
                                                                   {
+        crow::response res;
         res.add_header("Access-Control-Allow-Origin", "*");
         this->set_common_headers(res);
         this->fetch_all_blocks_route(req, res);
         res.end();
+        return res;
         });
 
     CROW_ROUTE(app, "/transactions/all").methods(crow::HTTPMethod::GET)([this](const crow::request &req, crow::response &res)
