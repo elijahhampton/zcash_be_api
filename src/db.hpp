@@ -5,6 +5,7 @@
 #include "nlohmann/json.hpp"
 #include <memory>
 #include <fstream>
+#include <cstdint>
 
 using json = nlohmann::json;
 
@@ -18,8 +19,10 @@ class Database {
 
         std::optional<nlohmann::json> fetchAllBlocks();
         json fetchAllTransactions();
-        std::optional<json> fetchPaginatedTransactions(int page, int limit);
-        std::optional<json> fetchPaginatedBlocks(int page, int limit);
+        std::optional<json> fetchPaginatedTransactions(int page, int limit, bool isReversed);
+        std::optional<json> fetchPaginatedBlocks(int page, int limit, bool reverseOrder);
+        uint64_t fetchTotalTransactionCount();
+        uint64_t fetchTotalBlocksCount();
     
     private:
         bool is_connected;

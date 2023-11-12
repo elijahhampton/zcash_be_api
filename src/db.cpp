@@ -38,7 +38,6 @@ void Database::connect(const std::string &dbname, const std::string &user, const
     }
 }
 
-
 /**
  * Fetches all blocks
  */
@@ -59,7 +58,7 @@ std::optional<json> Database::fetchAllBlocks()
 
         // Convert blocks to json array
         json vecAsJson = jsonBlocksVec;
-        
+
         tx.commit();
         this->ReleaseConnection(std::move(conn));
 
@@ -96,7 +95,7 @@ json Database::fetchAllTransactions()
 
         tx.commit();
         this->ReleaseConnection(std::move(conn));
-        
+
         return vecAsJson;
     }
     catch (std::exception &e)
@@ -108,14 +107,40 @@ json Database::fetchAllTransactions()
 }
 
 // Fetch blocks with pagination
-std::optional<json> Database::fetchPaginatedBlocks(int page, int limit)
+std::optional<json> Database::fetchPaginatedBlocks(int page, int limit, bool reverseOrder)
 {
+    uint64_t totalBlockCount = this->fetchTotalBlocksCount();
+
+    std::string query;
+    if (reverseOrder)
+    {
+        // Calculate the offset from the back of the list.
+        int offset = totalBlockCount - (page * limit);
+        // If the offset is negative, we've gone past the beginning of the list.
+        if (offset < 0)
+        {
+            limit += offset; // Adjust the limit to fetch the remaining records.
+            offset = 0;      // Set the offset to the start of the list.
+        }
+
+        query = "SELECT * FROM (SELECT * FROM blocks ORDER BY height DESC LIMIT " +
+                std::to_string(limit) + " OFFSET " + std::to_string(offset) +
+                ") sub ORDER BY height ASC";
+    }
+    else
+    {
+        // Calculate the offset as normal for non-reversed order.
+        int offset = (page - 1) * limit;
+        query = "SELECT * FROM blocks ORDER BY height ASC LIMIT " +
+                std::to_string(limit) + " OFFSET " + std::to_string(offset);
+    }
+
     std::unique_ptr<pqxx::connection> conn = this->GetConnection();
     std::vector<json> jsonBlocksVec;
     try
     {
         pqxx::work tx(*conn.get());
-        pqxx::result result = tx.exec("SELECT * FROM blocks OFFSET " + std::to_string((page - 1) * limit) + " LIMIT " + std::to_string(limit));
+        pqxx::result result = tx.exec(query);
 
         for (const pqxx::row &row : result)
         {
@@ -123,7 +148,7 @@ std::optional<json> Database::fetchPaginatedBlocks(int page, int limit)
         }
 
         json vecAsJson = jsonBlocksVec;
-        
+
         tx.commit();
         this->ReleaseConnection(std::move(conn));
 
@@ -137,15 +162,40 @@ std::optional<json> Database::fetchPaginatedBlocks(int page, int limit)
     }
 }
 
-// Fetch transactions with pagination
-std::optional<json> Database::fetchPaginatedTransactions(int page, int limit)
+std::optional<json> Database::fetchPaginatedTransactions(int page, int limit, bool isReversed)
 {
+    uint64_t totalTransactionsCount = this->fetchTotalTransactionCount();
+
+    std::string query;
+    if (isReversed)
+    {
+        // Calculate the offset from the back of the list.
+        int offset = totalTransactionsCount - (page * limit);
+        // If the offset is negative, we've gone past the beginning of the list.
+        if (offset < 0)
+        {
+            limit += offset; // Adjust the limit to fetch the remaining records.
+            offset = 0;      // Set the offset to the start of the list.
+        }
+
+        query = "SELECT * FROM (SELECT * FROM transactions ORDER BY height DESC LIMIT " +
+                std::to_string(limit) + " OFFSET " + std::to_string(offset) +
+                ") sub ORDER BY height ASC";
+    }
+    else
+    {
+        // Calculate the offset as normal for non-reversed order.
+        int offset = (page - 1) * limit;
+        query = "SELECT * FROM transactions ORDER BY height ASC LIMIT " +
+                std::to_string(limit) + " OFFSET " + std::to_string(offset);
+    }
+
     std::unique_ptr<pqxx::connection> conn = this->GetConnection();
     std::vector<json> jsonTxVec;
     try
     {
         pqxx::work tx(*conn);
-        pqxx::result result = tx.exec("SELECT * FROM transactions OFFSET " + std::to_string((page - 1) * limit) + " LIMIT " + std::to_string(limit));
+        pqxx::result result = tx.exec(query);
 
         for (const pqxx::row &row : result)
         {
@@ -156,7 +206,7 @@ std::optional<json> Database::fetchPaginatedTransactions(int page, int limit)
 
         tx.commit();
         this->ReleaseConnection(std::move(conn));
-        
+
         return vecAsJson;
     }
     catch (std::exception &e)
@@ -164,6 +214,63 @@ std::optional<json> Database::fetchPaginatedTransactions(int page, int limit)
         this->ReleaseConnection(std::move(conn));
         std::cout << e.what() << std::endl;
         return json(nullptr);
+    }
+}
+
+// Function to fetch the total count of records from the Transactions table.
+uint64_t Database::fetchTotalTransactionCount()
+{
+    std::unique_ptr<pqxx::connection> conn = this->GetConnection();
+
+    try
+    {
+        pqxx::work tx(*conn);
+        pqxx::result result = tx.exec("SELECT COUNT(*) FROM transactions");
+
+        int count = 0;
+        if (!result.empty())
+        {
+            count = result[0][0].as<int>();
+        }
+
+        tx.commit();
+        this->ReleaseConnection(std::move(conn));
+
+        return count;
+    }
+    catch (std::exception &e)
+    {
+        this->ReleaseConnection(std::move(conn));
+        std::cout << "Error fetching transaction count: " << e.what() << std::endl;
+        return 0;
+    }
+}
+
+// Function to fetch the total count of records from the Blocks table.
+uint64_t Database::fetchTotalBlocksCount()
+{
+    std::unique_ptr<pqxx::connection> conn = this->GetConnection();
+    try
+    {
+        pqxx::work tx(*conn);
+        pqxx::result result = tx.exec("SELECT COUNT(*) FROM blocks");
+
+        int count = 0;
+        if (!result.empty())
+        {
+            count = result[0][0].as<int>();
+        }
+
+        tx.commit();
+        this->ReleaseConnection(std::move(conn));
+
+        return count;
+    }
+    catch (std::exception &e)
+    {
+        this->ReleaseConnection(std::move(conn));
+        std::cout << "Error fetching blocks count: " << e.what() << std::endl;
+        return 0;
     }
 }
 

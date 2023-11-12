@@ -2,6 +2,7 @@
 #define ROUTES_HPP
 
 #include "routes.hpp"
+#include "parser.hpp"
 #include "../include/crow_all.h"
 #include <optional>
 
@@ -93,10 +94,11 @@ void ZCashApi::fetch_paginated_blocks_route(const crow::request &req, crow::resp
 {
     int page = std::stoi(req.url_params.get("page") ? req.url_params.get("page") : "1");
     int limit = std::stoi(req.url_params.get("limit") ? req.url_params.get("limit") : "50");
+    bool isReversed = req.url_params.get("reversedOrder") ? Parser::StringToBool(req.url_params.get("reversedOrder")) : false;
 
     try
     {
-        std::optional<json> result = db.fetchPaginatedBlocks(page, limit);
+        std::optional<json> result = db.fetchPaginatedBlocks(page, limit, isReversed);
 
         if (!result.has_value())
         {
@@ -121,10 +123,11 @@ void ZCashApi::fetch_paginated_transactions_route(const crow::request &req, crow
 {
     int page = std::stoi(req.url_params.get("page") ? req.url_params.get("page") : "1");
     int limit = std::stoi(req.url_params.get("limit") ? req.url_params.get("limit") : "50");
+    bool isReversed = req.url_params.get("reversedOrder") ? Parser::StringToBool(req.url_params.get("reversedOrder")) : false;
 
     try
     {
-        std::optional<json> result = db.fetchPaginatedTransactions(page, limit);
+        std::optional<json> result = db.fetchPaginatedTransactions(page, limit, isReversed);
 
         if (!result.has_value())
         {
