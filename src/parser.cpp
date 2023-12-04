@@ -4,7 +4,7 @@
 #define PARSER_CPP
 
 /**
- * Converts postgres rows to JSON
+ * Converts pqxx::row to JSON
 */
 json Parser::row_to_json(const pqxx::row& r) {
     json j;

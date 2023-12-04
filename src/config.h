@@ -38,6 +38,10 @@ public:
     static std::string getDatabasePassword() {
         return getEnv("DB_PASSWORD", "mysecretpassword");
     }
+
+    static std::string getApiPort() {
+        return getEnv("PORT", "8000");
+    }
 };
 
 #endif // CONFIG_H
