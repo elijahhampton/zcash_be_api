@@ -13,13 +13,8 @@ int main() {
         uint16_t api_port = std::stoi(Config::getApiPort());
         api.init(app, Config::getDatabaseName(), Config::getDatabaseUser(), Config::getDatabasePassword(), Config::getDatabaseHost(), Config::getDatabasePort());
         app.loglevel(crow::LogLevel::DEBUG);
+        app.port(api_port).multithreaded().run();
 
-        // Run the server asynchronously
-        auto server_future = std::async(std::launch::async, [&]() {
-            app.port(api_port).multithreaded().run();
-        });
-
-        server_future.get();
     } catch (const std::exception &e) {
         std::cerr << "Exception: " << e.what() << std::endl;
         return 1;
