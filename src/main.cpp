@@ -19,9 +19,6 @@ int main() {
             app.port(api_port).multithreaded().run();
         });
 
-        // You can add other logic here, and the program will not terminate
-
-        // Wait for the server to finish (this line is optional)
         server_future.get();
     } catch (const std::exception &e) {
         std::cerr << "Exception: " << e.what() << std::endl;
