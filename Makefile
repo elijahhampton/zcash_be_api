@@ -1,9 +1,8 @@
 GCR_HOST = gcr.io
 PROJECT_ID = sigma-scheduler-405523
 REPO_NAME = be-api
-IMAGE_TAG = development
 
-IMAGE = $(GCR_HOST)/$(PROJECT_ID)/$(REPO_NAME):$(IMAGE_TAG)
+IMAGE = $(GCR_HOST)/$(PROJECT_ID)/$(REPO_NAME):latest
 
 CC = g++
 CXX = clang++
@@ -15,15 +14,21 @@ all: api
 
 api: src/main.cpp src/db.cpp src/routes.cpp src/parser.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o zcash-api src/main.cpp src/db.cpp src/routes.cpp src/parser.cpp $(LFLAGS)
- 
+
 clean:
 	rm -f zcash-api
 
-build:
-	docker build -t $(REPO_NAME) .
+build: api Dockerfile
+	docker build -t $(IMAGE) .
 
 tag:
-	docker tag $(REPO_NAME) $(IMAGE)
+	docker tag $(IMAGE) $(IMAGE)
 
 push:
 	docker push $(IMAGE)
+
+run:
+	docker run $(IMAGE)
+
+docker-run:
+	docker run -p 8000:8000 -e PORT=8000 $(MAGE)

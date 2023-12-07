@@ -29,14 +29,18 @@ void Database::connect(const std::string &dbname, const std::string &user, const
             " host=" + host +
             " port=" + port;
 
+std::cout << "Connect()" << std::endl;
         for (size_t i = 0; i < 10; ++i)
         {
             auto conn = std::make_unique<pqxx::connection>(connection_string);
             connectionPool.push(std::move(conn));
         }
+        std::cout << "Database connected" << std::endl;
+        
     }
     catch (std::exception &e)
     {
+                std::cout << e.what() << std::endl;
         throw e;
     }
 }

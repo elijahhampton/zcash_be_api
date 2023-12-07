@@ -1,6 +1,7 @@
 #include "routes.hpp"
 #include "../include/crow_all.h"
 #include "config.h"
+#include <sstream>
 
 int main()
 {
@@ -10,20 +11,14 @@ int main()
 
     try
     {
-        auto &cors = app.get_middleware<crow::CORSHandler>();
-
-        cors.global()
-            .methods("POST"_method, "GET"_method)
-            .prefix("/")
-            .origin("ec2-18-222-152-234.us-east-2.compute.amazonaws.com")
-            .allow_credentials();
-
         uint16_t api_port = std::stoi(Config::getApiPort());
         api.init(app, Config::getDatabaseName(), Config::getDatabaseUser(), Config::getDatabasePassword(), Config::getDatabaseHost(), Config::getDatabasePort());
+        app.loglevel(crow::LogLevel::DEBUG);
         app.port(api_port).multithreaded().run();
     }
     catch (const std::exception &e)
     {
+        std::cout << "AAA" << std::endl;
         std::cout << e.what() << std::endl;
         return 1;
     }

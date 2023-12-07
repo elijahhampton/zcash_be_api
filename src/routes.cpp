@@ -52,10 +52,11 @@ void ZCashApi::fetch_all_blocks_route(const crow::request &req, crow::response &
         res.code = 200;
         res.write(result.value().dump());
     }
-    catch (std::exception &e)
+    catch (const std::exception &e)
     {
         res.code = 500;
         res.write(json());
+        CROW_LOG_CRITICAL << e.what();
     }
 }
 
@@ -79,10 +80,12 @@ void ZCashApi::fetch_all_transactions_route(const crow::request &req, crow::resp
     }
     catch (std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
         res.code = 500;
+
     }
 }
 
@@ -109,6 +112,7 @@ void ZCashApi::fetch_paginated_blocks_route(const crow::request &req, crow::resp
     }
     catch (std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
@@ -139,6 +143,7 @@ void ZCashApi::fetch_paginated_transactions_route(const crow::request &req, crow
     }
     catch (std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
@@ -164,6 +169,7 @@ void ZCashApi::fetch_block_by_hash(const crow::request &req, crow::response &res
     }
     catch (std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
@@ -190,6 +196,7 @@ void ZCashApi::fetch_transaction_by_hash(const crow::request &req, crow::respons
     }
     catch (std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
@@ -215,6 +222,7 @@ void ZCashApi::fetch_transparent_outputs_related_to_transaction_hash(const crow:
     }
     catch (std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
@@ -240,6 +248,7 @@ void ZCashApi::fetch_transparent_inputs_related_to_transaction_hash(const crow::
     }
     catch (std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
@@ -271,6 +280,7 @@ void ZCashApi::fetch_transactions_details_from_ids(const crow::request &req, cro
     }
     catch (std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
@@ -296,6 +306,7 @@ void ZCashApi::fetch_peer_info(const crow::request &req, crow::response &res)
     }
     catch (const std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
@@ -320,6 +331,7 @@ void ZCashApi::fetch_blockchain_info(const crow::request &req, crow::response &r
     }
     catch (const std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
@@ -345,6 +357,7 @@ void ZCashApi::fetch_total_block_count(const crow::request &req, crow::response 
     }
     catch (const std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
@@ -371,6 +384,7 @@ void ZCashApi::fetch_total_transaction_count(const crow::request &req, crow::res
     }
     catch (const std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
@@ -414,6 +428,7 @@ void ZCashApi::fetch_total_transaction_counts_in_period(const crow::request &req
     }
     catch (const std::exception &e)
     {
+                CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());

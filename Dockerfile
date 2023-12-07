@@ -12,11 +12,11 @@ RUN apt-get update && \
     libboost-system-dev \
     git
 
-ENV DB_HOST=db \
+ENV DB_HOST=34.170.25.118 \
     DB_PORT=5432 \
     DB_NAME=postgres \
     DB_USER=postgres \
-    DB_PASSWORD=mysecretpassword
+    DB_PASSWORD=Q9X638hs2Y78
 
 WORKDIR /blockexplorer-api
 
