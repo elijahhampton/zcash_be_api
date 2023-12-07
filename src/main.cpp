@@ -2,24 +2,29 @@
 #include "../include/crow_all.h"
 #include "config.h"
 #include <sstream>
+#include <future>
 
-int main()
-{
-    Database database;
-    ZCashApi api(database);
-    crow::App<crow::CORSHandler> app;
+int main() {
+    try {
+        Database database;
+        ZCashApi api(database);
+        crow::App<crow::CORSHandler> app;
 
-    try
-    {
         uint16_t api_port = std::stoi(Config::getApiPort());
         api.init(app, Config::getDatabaseName(), Config::getDatabaseUser(), Config::getDatabasePassword(), Config::getDatabaseHost(), Config::getDatabasePort());
         app.loglevel(crow::LogLevel::DEBUG);
-        app.port(api_port).multithreaded().run();
-    }
-    catch (const std::exception &e)
-    {
-        std::cout << "AAA" << std::endl;
-        std::cout << e.what() << std::endl;
+
+        // Run the server asynchronously
+        auto server_future = std::async(std::launch::async, [&]() {
+            app.port(api_port).multithreaded().run();
+        });
+
+        // You can add other logic here, and the program will not terminate
+
+        // Wait for the server to finish (this line is optional)
+        server_future.get();
+    } catch (const std::exception &e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
         return 1;
     }
 
