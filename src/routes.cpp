@@ -6,10 +6,7 @@
 #include "../include/crow_all.h"
 #include <optional>
 
-// TODO: Refactor runtime_errors on !optional.has_value()
-
 ZCashApi::ZCashApi(Database &database) : db(database) {}
-ZCashApi::~ZCashApi() {}
 
 /**
  * Initialize the API. This method makes a call to also initialize the database
@@ -31,7 +28,7 @@ void ZCashApi::init(crow::App<crow::CORSHandler> &app, const std::string &dbname
 void ZCashApi::hello_route(const crow::request &req, crow::response &res)
 {
     res.code = 200;
-    res.write("Hello World");
+    res.write("Welcome to the zcash api.");
 }
 
 /**
@@ -394,26 +391,31 @@ void ZCashApi::fetch_total_transaction_count(const crow::request &req, crow::res
 
 void ZCashApi::fetch_total_transaction_counts_in_period(const crow::request &req, crow::response &res)
 {
-    std::ostringstream os;
-    uint8_t time_period = req.url_params.get("period") == nullptr ? 14 : static_cast<uint8_t>(*req.url_params.get("period"));
-    // Calculate the date 14 days ago
-    auto startDate = std::chrono::system_clock::now() - std::chrono::hours(24 * 14);
-    uint64_t startTimestamp = std::chrono::duration_cast<std::chrono::seconds>(startDate.time_since_epoch()).count();
-
-    // Use the current date as endDate
-    auto endDate = std::chrono::system_clock::now();
-    uint64_t endTimestamp = std::chrono::duration_cast<std::chrono::seconds>(endDate.time_since_epoch()).count();
-
-    std::string startTimestampParam = req.url_params.get("startTimestamp");
-    std::string endTimestampParam = req.url_params.get("endTimestamp");
-
-    // Convert string to uint64_t using stringstream
-    uint64_t start_timestamp = startTimestampParam.empty() ? startTimestamp : std::stoull(startTimestampParam);
-    uint64_t end_timestamp = endTimestampParam.empty() ? endTimestamp : std::stoull(endTimestampParam);
-
     try
     {
-        std::optional<json> result = db.fetchTransactionsForLast14Days(start_timestamp, end_timestamp);
+        // Fetch the most recent timestamp from the transactions table
+        std::optional<uint64_t> mostRecentTimestampOpt = db.getMostRecentTransactionTimestamp();
+
+        if (!mostRecentTimestampOpt.has_value()) {
+            json jsonResponse;
+            jsonResponse["error"] = "No transactions found in the database.";
+            res.write(jsonResponse.dump());
+            res.code = 404;
+            return;
+        }
+
+        uint64_t mostRecentTimestamp = mostRecentTimestampOpt.value();
+
+        // Calculate the start timestamp (14 days before the most recent timestamp)
+        auto mostRecentDate = std::chrono::system_clock::from_time_t(mostRecentTimestamp);
+        auto startDate = mostRecentDate - std::chrono::hours(24 * 14);
+        uint64_t startTimestamp = std::chrono::duration_cast<std::chrono::seconds>(startDate.time_since_epoch()).count();
+
+        CROW_LOG_DEBUG << "Start timestamp " << startTimestamp;
+
+        // Fetch transaction data
+        std::optional<json> result = db.fetchTransactionInPeriod(startTimestamp, mostRecentTimestamp);
+        
         if (!result.has_value())
         {
             json jsonResponse;
@@ -423,18 +425,45 @@ void ZCashApi::fetch_total_transaction_counts_in_period(const crow::request &req
             return;
         }
 
-        res.write(json(result.value()).dump());
+        res.write(result.value().dump());
         res.code = 200;
     }
     catch (const std::exception &e)
     {
-                CROW_LOG_CRITICAL << e.what();
+        std::cout << e.what() << std::endl;
+        CROW_LOG_CRITICAL << e.what();
         json errorResponse;
         this->db.createJsonErrorResponse(errorResponse, e);
         res.write(errorResponse.dump());
         res.code = 500;
     }
 }
+
+void ZCashApi::direct_search(const crow::request &req, crow::response &res)
+{
+    try {
+        const std::string searchPattern = req.url_params.get("pattern");
+
+        std::optional<json> searchOptVal = this->db.directSearch(searchPattern);
+        if (!searchOptVal.has_value()) {
+            res.code = 404;
+            return;
+        }
+
+        res.code = 200;
+        res.write(searchOptVal.value());
+
+    } catch (const std::exception &e) {
+        std::cout << e.what() << std::endl;
+        CROW_LOG_CRITICAL << e.what();
+        json errorResponse;
+        this->db.createJsonErrorResponse(errorResponse, e);
+        res.write(errorResponse.dump());
+        res.code = 500;
+    }
+}
+
+
 
 // Private
 
@@ -549,6 +578,12 @@ void ZCashApi::setup_routes(crow::App<crow::CORSHandler> &app)
                                                                             {
         this->set_common_headers(res);
         this->fetch_total_transaction_counts_in_period(req, res);
+        res.end(); });
+
+    CROW_ROUTE(app, "/search").methods(crow::HTTPMethod::POST)([this](const crow::request &req, crow::response &res)
+                                                                            {
+        this->set_common_headers(res);
+        this->direct_search(req, res);
         res.end(); });
 }
 

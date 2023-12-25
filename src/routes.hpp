@@ -16,7 +16,7 @@ public:
     /**
      * @brief Destructor for ZCashApi.
      */
-    ~ZCashApi();
+    ~ZCashApi() noexcept = default;
 
     /**
      * @brief Initialize the ZCashApi by configuring routes and connecting to the specified database.
@@ -138,6 +138,7 @@ public:
      */
     void fetch_total_transaction_counts_in_period(const crow::request &req, crow::response &res);
 
+    void direct_search(const crow::request &req, crow::response &res);
 private:
     /**
      * @brief Reference to the Database instance for handling Zcash data.

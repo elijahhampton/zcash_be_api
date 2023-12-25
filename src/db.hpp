@@ -9,6 +9,7 @@
 #include <fstream>
 #include <cstdint>
 #include <optional>
+#include "../include/crow_all.h"
 
 using json = nlohmann::json;
 using transaction = pqxx::work;
@@ -22,12 +23,12 @@ public:
     /**
      * @brief Constructor for the Database class.
      */
-    Database();
+    Database() = default;
 
     /**
      * @brief Destructor for the Database class.
      */
-    ~Database();
+    ~Database() noexcept = default;
 
     /**
      * @brief Connect to the PostgreSQL database.
@@ -134,12 +135,12 @@ public:
     std::optional<json> fetchBlockchainInfo();
 
     /**
-     * @brief Fetch transactions within the last 14 days based on timestamps.
-     * @param startTimestamp Start timestamp for the 14-day period.
-     * @param endTimestamp End timestamp for the 14-day period.
+     * @brief Fetch transactions within the last X days based on timestamps.
+     * @param startTimestamp Start timestamp for the X-day period.
+     * @param endTimestamp End timestamp for the X-day period.
      * @return Vector of JSON objects containing information about transactions within the specified time range.
      */
-    std::optional<json> fetchTransactionsForLast14Days(uint64_t startTimestamp, uint64_t endTimestamp);
+    std::optional<json> fetchTransactionInPeriod(uint64_t startTimestamp, uint64_t endTimestamp);
 
     /**
      * @brief Create a JSON error response for exception handling.
@@ -147,10 +148,14 @@ public:
      */
     void createJsonErrorResponse(json &errorResponse, const std::exception &e);
 
+    std::optional<uint64_t> getMostRecentTransactionTimestamp();
+
+    std::optional<json> directSearch(const std::string&);
 private:
     bool is_connected;                                            ///< Flag indicating whether the database is connected.
     std::queue<std::unique_ptr<pqxx::connection>> connectionPool; ///< Connection pool for managing database connections.
-    std::mutex cs_pool_mutex;                                         ///< Mutex for thread-safe access to the connection pool.
+    std::mutex cs_pool_mutex;   
+    const std::string prepared_direct_search_statement = "direct_search_query";                                      ///< Mutex for thread-safe access to the connection pool.
 
     /**
      * @brief Shutdown all database connections.
@@ -176,4 +181,6 @@ private:
      * @return Date string in a specific format.
      */
     std::string unixTimestampToDateString(uint64_t timestamp);
+
+
 };

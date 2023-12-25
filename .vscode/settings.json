@@ -94,7 +94,8 @@
         "__std_stream": "cpp",
         "cfenv": "cpp",
         "strstream": "cpp",
-        "source_location": "cpp"
+        "source_location": "cpp",
+        "cinttypes": "cpp"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }
