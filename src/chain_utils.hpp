@@ -3,8 +3,7 @@
 
 #include <string>
 
-const uint64_t ZCASH_HEXADECIMAL_HASH_LENGTH = 64;
-const uint64_t ZCASH_SHA256_HASH_LENGTH_IN_BITS = 256;
+const uint64_t ZCASH_SHA256_HASH_LENGTH = 64;
 
 class ChainUtils {
 public:

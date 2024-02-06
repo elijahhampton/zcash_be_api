@@ -8,6 +8,9 @@ using json = nlohmann::json;
  */
 class Parser {
 public:
+    Parser() = default;
+    ~Parser() noexcept = default;
+    
     /**
      * @brief Convert a PostgreSQL row to a JSON object.
      * @param r PostgreSQL row to convert.

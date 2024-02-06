@@ -29,7 +29,6 @@ void Database::connect(const std::string &dbname, const std::string &user, const
             auto conn = std::make_unique<pqxx::connection>(connection_string);
             connectionPool.push(std::move(conn));
         }
-        
     }
 
     catch (std::exception &e)
@@ -52,7 +51,8 @@ std::optional<json> Database::fetchAllBlocks()
         auto result = tx.exec("SELECT * FROM blocks");
         json retVal({});
 
-        if (result.empty()) {
+        if (result.empty())
+        {
             return retVal;
         }
 
@@ -89,7 +89,8 @@ json Database::fetchAllTransactions()
         transaction tx(*conn);
         auto result = tx.exec("SELECT * FROM transactions");
         this->ReleaseConnection(std::move(conn));
-        if (result.empty()) {
+        if (result.empty())
+        {
             return retVal;
         }
 
@@ -98,7 +99,6 @@ json Database::fetchAllTransactions()
         {
             jsonTxVec.push_back(Parser::row_to_json(row));
         }
-
 
         retVal = jsonTxVec;
 
@@ -115,38 +115,49 @@ json Database::fetchAllTransactions()
 std::optional<json> Database::fetchPaginatedBlocks(int page, int limit, bool reverseOrder)
 {
 
-    std::optional<uint64_t> optionalResult = this->fetchTotalBlocksCount();
-    json retVal{{}};
+    std::optional<uint64_t> optionalTotalCount = this->fetchTotalBlocksCount();
+    json retVal = {
+        {"data", json::array()},
+        {"totalCount", 0},
+        {"totalPages", 0}};
 
-    if (!optionalResult.has_value())
+    if (!optionalTotalCount.has_value() || limit <= 0)
     {
-        return retVal;
+        return retVal; // Return early if no transactions or invalid limit.
     }
 
-    uint64_t totalBlockCount = optionalResult.value();
+    uint64_t totalBlockCount = optionalTotalCount.value();
+    uint64_t totalPages = (totalBlockCount + limit - 1) / limit; // Ceiling of totalTransactionsCount divided by limit.
+    retVal["totalPages"] = totalPages;
 
+    if (page > totalPages)
+        page = totalPages; // Adjust page number if out of bounds.
+
+    int offset;
     std::string query;
     if (reverseOrder)
     {
-        // Calculate the offset from the back of the list.
-        int offset = totalBlockCount - (page * limit);
-        // If the offset is negative, we've gone past the beginning of the list.
-        if (offset < 0)
+        // Offset backward order
+        // The first page in reverse order should fetch the most recent records
+        int offsetForReverse = std::max(0, static_cast<int>(totalBlockCount - (page * limit)));
+
+        // Adjust the offset if it's beyond the total count, which can happen in the last page of reverse order.
+        if (offsetForReverse < 0)
         {
-            limit += offset; // Adjust the limit to fetch the remaining records.
-            offset = 0;      // Set the offset to the start of the list.
+            limit += offsetForReverse; // Reduce the limit to fetch only the remaining records.
+            offsetForReverse = 0;      // Start from the first record.
         }
 
-        query = "SELECT * FROM (SELECT * FROM blocks ORDER BY height DESC LIMIT " +
-                std::to_string(limit) + " OFFSET " + std::to_string(offset) +
-                ") sub ORDER BY height DESC";
+        // Elements in descending order
+        query = "SELECT * FROM blocks ORDER BY CAST(height AS INTEGER) DESC LIMIT " +
+                std::to_string(limit) + " OFFSET " + std::to_string(offsetForReverse);
     }
     else
     {
-        // Calculate the offset as normal for non-reversed order.
-        int offset = (page - 1) * limit;
-        query = "SELECT * FROM blocks ORDER BY height ASC LIMIT " +
-                std::to_string(limit) + " OFFSET " + std::to_string(offset);
+        // Offset forward order
+        int offsetForForward = (page - 1) * limit;
+        query = "SELECT * FROM blocks ORDER BY CAST(height AS INTEGER) ASC LIMIT " +
+                std::to_string(limit) + " OFFSET " + std::to_string(offsetForForward);
     }
 
     auto conn = this->GetConnection();
@@ -156,17 +167,22 @@ std::optional<json> Database::fetchPaginatedBlocks(int page, int limit, bool rev
         transaction tx(*conn.get());
         auto result = tx.exec(query);
 
-        if (result.empty()) {
+        if (result.empty())
+        {
             return retVal;
         }
 
         std::vector<json> jsonBlocksVec;
+        jsonBlocksVec.reserve(result.size());
+
         for (const pqxx::row &row : result)
         {
             jsonBlocksVec.push_back(Parser::row_to_json(row));
         }
 
-        retVal = jsonBlocksVec;
+        retVal["data"] = jsonBlocksVec;
+        retVal["totalCount"] = totalBlockCount;
+        retVal["totalPages"] = std::ceil(static_cast<double>(totalBlockCount) / limit);
 
         this->ReleaseConnection(std::move(conn));
 
@@ -182,35 +198,48 @@ std::optional<json> Database::fetchPaginatedBlocks(int page, int limit, bool rev
 
 std::optional<json> Database::fetchPaginatedTransactions(int page, int limit, bool isReversed)
 {
-    std::optional<uint64_t> optionalResult = this->fetchTotalTransactionCount();
-    json retVal{{}};
+    std::optional<uint64_t> optionalTotalCount = this->fetchTotalTransactionCount();
+    json retVal = {
+        {"data", json::array()},
+        {"totalCount", 0},
+        {"totalPages", 0}};
 
-    if (!optionalResult.has_value())
+    if (!optionalTotalCount.has_value() || limit <= 0)
     {
-        return retVal;
+        return retVal; // Return early if no transactions or invalid limit.
     }
 
-    uint64_t totalTransactionsCount = optionalResult.value();
+    uint64_t totalTransactionsCount = optionalTotalCount.value();
+    uint64_t totalPages = (totalTransactionsCount + limit - 1) / limit; // Ceiling of totalTransactionsCount divided by limit.
+    retVal["totalPages"] = totalPages;
 
+    if (page > totalPages)
+        page = totalPages; // Adjust page number if out of bounds.
+
+    int offset;
     std::string query;
     if (isReversed)
     {
-        int offset = totalTransactionsCount - (page * limit);
-        if (offset < 0)
+        // Correctly calculate the offset for reverse pagination.
+        // The first page in reverse order should fetch the most recent records.
+        int offsetForReverse = std::max(0, static_cast<int>(totalTransactionsCount - (page * limit)));
+
+        // Adjust the offset if it's beyond the total count, which can happen in the last page of reverse order.
+        if (offsetForReverse < 0)
         {
-            limit += offset; // Adjust the limit to fetch the remaining records.
-            offset = 0;      // Set the offset to the start of the list.
+            limit += offsetForReverse; // Reduce the limit to fetch only the remaining records.
+            offsetForReverse = 0;      // Start from the first record.
         }
 
-        query = "SELECT * FROM (SELECT * FROM transactions ORDER BY CAST(height AS INTEGER) DESC LIMIT " +
-                std::to_string(limit) + " OFFSET " + std::to_string(offset) +
-                ") sub ORDER BY CAST(height AS INTEGER) DESC";
+        // Fetch records in descending order without reordering them in a subquery.
+        query = "SELECT * FROM transactions ORDER BY CAST(height AS INTEGER) DESC LIMIT " +
+                std::to_string(limit) + " OFFSET " + std::to_string(offsetForReverse);
     }
     else
     {
-        int offset = (page - 1) * limit;
+        int offsetForForward = (page - 1) * limit;
         query = "SELECT * FROM transactions ORDER BY CAST(height AS INTEGER) ASC LIMIT " +
-                std::to_string(limit) + " OFFSET " + std::to_string(offset);
+                std::to_string(limit) + " OFFSET " + std::to_string(offsetForForward);
     }
 
     auto conn = this->GetConnection();
@@ -221,12 +250,16 @@ std::optional<json> Database::fetchPaginatedTransactions(int page, int limit, bo
         auto result = tx.exec(query);
 
         std::vector<json> jsonTxVec;
+        jsonTxVec.reserve(result.size());
+
         for (const pqxx::row &row : result)
         {
             jsonTxVec.push_back(Parser::row_to_json(row));
         }
 
-        retVal = jsonTxVec;
+        retVal["data"] = jsonTxVec;
+        retVal["totalCount"] = totalTransactionsCount;
+        retVal["totalPages"] = std::ceil(static_cast<double>(totalTransactionsCount) / limit);
 
         this->ReleaseConnection(std::move(conn));
 
@@ -239,7 +272,6 @@ std::optional<json> Database::fetchPaginatedTransactions(int page, int limit, bo
     }
 }
 
-
 // Function to fetch the total count of records from the Transactions table.
 std::optional<uint64_t> Database::fetchTotalTransactionCount()
 {
@@ -249,7 +281,7 @@ std::optional<uint64_t> Database::fetchTotalTransactionCount()
     {
         transaction tx(*conn);
         auto result = tx.exec("SELECT COUNT(*) FROM transactions");
-        
+
         int retVal = 0;
         if (result.empty())
         {
@@ -276,11 +308,11 @@ std::optional<uint64_t> Database::getMostRecentTransactionTimestamp()
     {
         transaction tx(*conn);
         auto result = tx.exec("SELECT MAX(timestamp) FROM transactions");
-        
+
         if (result.empty() || result[0][0].is_null())
         {
             this->ReleaseConnection(std::move(conn));
-            return std::nullopt; 
+            return std::nullopt;
         }
 
         this->ReleaseConnection(std::move(conn));
@@ -294,7 +326,6 @@ std::optional<uint64_t> Database::getMostRecentTransactionTimestamp()
         throw;
     }
 }
-
 
 // Function to fetch the total count of records from the Blocks table.
 std::optional<uint64_t> Database::fetchTotalBlocksCount()
@@ -364,10 +395,10 @@ std::optional<json> Database::fetchTransactionByHash(const std::string &transact
 
         if (!result.empty())
         {
-           retVal;
+            retVal;
         }
 
-        return Parser::row_to_json(result[0]).dump(); 
+        return Parser::row_to_json(result[0]).dump();
     }
     catch (const std::exception &e)
     {
@@ -396,7 +427,7 @@ std::optional<json> Database::fetchTransparentOutputsRelatedToTransactionId(cons
         std::vector<json> transaction_outputs;
         for (const auto &row : result)
         {
-                transaction_outputs.push_back(Parser::row_to_json(row));
+            transaction_outputs.push_back(Parser::row_to_json(row));
         }
 
         retVal = transaction_outputs;
@@ -428,9 +459,9 @@ std::optional<json> Database::fetchTransparentInputsRelatedToTransactionId(const
 
         std::vector<json> transaction_inputs;
         for (const auto &row : result)
-            {
-                transaction_inputs.push_back(Parser::row_to_json(row));
-            }
+        {
+            transaction_inputs.push_back(Parser::row_to_json(row));
+        }
 
         retVal = transaction_inputs;
         return retVal;
@@ -543,36 +574,39 @@ std::optional<json> Database::fetchBlockchainInfo()
     }
 }
 
-std::optional<json> Database::directSearch(const std::string& pattern)
+std::optional<json> Database::directSearch(const std::string &pattern)
 {
 
-    if (!ChainUtils::isValidSHA256Hash(pattern)) {
+    if (!ChainUtils::isValidSHA256Hash(pattern))
+    {
         throw std::runtime_error("Invalid request for pattern " + pattern + ".");
     }
 
     auto conn = this->GetConnection();
 
     const std::string preparedStmt{"direct_search_query"};
-    
-    try {
+
+    try
+    {
         transaction tx{*conn.get()};
-       
+
         conn->prepare(preparedStmt, "SELECT 'transactions' AS source_table, tx_id AS identifier FROM transactions WHERE tx_id = $1 UNION ALL SELECT 'blocks', hash FROM blocks WHERE hash = $1");
 
         auto result = tx.exec_prepared(preparedStmt, pattern);
         this->ReleaseConnection(std::move(conn));
 
-        if (result.empty()) {
+        if (result.empty())
+        {
             return std::nullopt;
         }
 
         return Parser::row_to_json(result[0]).dump();
-
-    } catch(const std::exception& e) {
+    }
+    catch (const std::exception &e)
+    {
         std::cout << e.what() << std::endl;
         throw;
     }
-  
 }
 
 std::optional<json> Database::fetchTransactionInPeriod(uint64_t startTimestamp, uint64_t a)
@@ -586,8 +620,8 @@ std::optional<json> Database::fetchTransactionInPeriod(uint64_t startTimestamp, 
 
         // Execute the SQL query to get transactions within the specified period
         transaction tx(*connection.get());
-        auto result = tx.exec("SELECT * FROM transactions WHERE timestamp >= " + 
-                              std::to_string(startTimestamp) + " AND timestamp <= " + 
+        auto result = tx.exec("SELECT * FROM transactions WHERE timestamp >= " +
+                              std::to_string(startTimestamp) + " AND timestamp <= " +
                               std::to_string(endTimestamp));
 
         this->ReleaseConnection(std::move(connection));
@@ -626,7 +660,6 @@ std::optional<json> Database::fetchTransactionInPeriod(uint64_t startTimestamp, 
     }
 }
 
-
 std::string Database::unixTimestampToDateString(uint64_t timestamp)
 {
     std::time_t time = static_cast<std::time_t>(timestamp);
@@ -638,7 +671,8 @@ std::string Database::unixTimestampToDateString(uint64_t timestamp)
 
 std::unique_ptr<pqxx::connection> Database::GetConnection()
 {
-    try {
+    try
+    {
         std::lock_guard<std::mutex> lock(cs_pool_mutex);
 
         // TODO: Refactor to wait until the connection pool has > 1 pqxx::connection
@@ -651,7 +685,9 @@ std::unique_ptr<pqxx::connection> Database::GetConnection()
         connectionPool.pop();
 
         return conn;
-    } catch(const std::exception& e) {
+    }
+    catch (const std::exception &e)
+    {
         throw std::runtime_error(e.what());
     }
 }

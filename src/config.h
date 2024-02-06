@@ -8,6 +8,8 @@
 
 class Config {
 public:
+    Config() = default;
+    ~Config() noexcept = default;
     static std::string getEnv(const char* key, const std::string& defaultValue = "") {
         char* val = std::getenv(key);
         if (val == nullptr) {  // Use default value if not found

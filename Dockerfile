@@ -12,11 +12,15 @@ RUN apt-get update && \
     libboost-system-dev \
     git
 
-ENV DB_HOST=34.170.25.118 \
-    DB_PORT=5432 \
+# Set other DB environment variables
+ENV DB_PORT=5432 \
     DB_NAME=postgres \
     DB_USER=postgres \
-    DB_PASSWORD=Q9X638hs2Y78
+    DB_HOST=host.docker.internal \
+    DB_PASSWORD=password
+    
+# Note: DB_PASSWORD is not set here
+# Note: DB_HOST is not set here
 
 WORKDIR /blockexplorer-api
 
