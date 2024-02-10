@@ -14,11 +14,15 @@
 using json = nlohmann::json;
 using transaction = pqxx::work;
 
+class ManagedConnection;
+
 /**
  * @brief Database class for handling interactions with a PostgreSQL database.
  */
 class Database
 {
+    friend struct ManagedConnection;
+
 public:
     /**
      * @brief Constructor for the Database class.
@@ -150,12 +154,13 @@ public:
 
     std::optional<uint64_t> getMostRecentTransactionTimestamp();
 
-    std::optional<json> directSearch(const std::string&);
+    std::optional<json> directSearch(const std::string &);
+
 private:
     bool is_connected;                                            ///< Flag indicating whether the database is connected.
     std::queue<std::unique_ptr<pqxx::connection>> connectionPool; ///< Connection pool for managing database connections.
-    std::mutex cs_pool_mutex;   
-    const std::string prepared_direct_search_statement = "direct_search_query";                                      ///< Mutex for thread-safe access to the connection pool.
+    std::mutex cs_pool_mutex;
+    const std::string prepared_direct_search_statement = "direct_search_query"; ///< Mutex for thread-safe access to the connection pool.
 
     /**
      * @brief Shutdown all database connections.
@@ -181,6 +186,26 @@ private:
      * @return Date string in a specific format.
      */
     std::string unixTimestampToDateString(uint64_t timestamp);
+};
 
+struct ManagedConnection
+{
+public:
+    ManagedConnection(Database &db_) : db(db_), conn(db_.GetConnection()) {}
+    ~ManagedConnection()
+    {
+        db.ReleaseConnection(std::move(conn));
+    }
 
+    pqxx::connection& operator*() {
+        return *conn;
+    }
+
+    pqxx::connection* operator->() {
+        return conn.get();
+    }
+
+private:
+    Database &db;
+    std::unique_ptr<pqxx::connection> conn;
 };

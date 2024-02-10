@@ -10,13 +10,19 @@ int main() {
         ZCashApi api(database);
         crow::App<crow::CORSHandler> app;
 
+        // Establish api port
         uint16_t api_port = std::stoi(Config::getApiPort());
+
+        // Init API
         api.init(app, Config::getDatabaseName(), Config::getDatabaseUser(), Config::getDatabasePassword(), Config::getDatabaseHost(), Config::getDatabasePort());
+        
+        // Set log level
         app.loglevel(crow::LogLevel::DEBUG);
+
+        // Run api with multithreading
         app.port(api_port).multithreaded().run();
 
     } catch (const std::exception &e) {
-        std::cerr << "Exception: " << e.what() << std::endl;
         return 1;
     }
 

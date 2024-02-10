@@ -1,4 +1,3 @@
-// Config.h
 #ifndef CONFIG_H
 #define CONFIG_H
 
@@ -43,6 +42,10 @@ public:
 
     static std::string getApiPort() {
         return getEnv("PORT", "8000");
+    }
+
+    static std::string getAccessControlOrigin() {
+        return getEnv("ACCESS_CONTROL_ORIGIN", "*");
     }
 };
 

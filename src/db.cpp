@@ -7,12 +7,6 @@
 #ifndef DB_CPP
 #define DB_CPP
 
-// DB should only return std::nullopt if something seriously goes wrong during the query.
-// Otherwise please simply return a default value wrapped in json and throw 404 if data is not found.
-
-/**
- * Connects to a postgres database instance
- */
 void Database::connect(const std::string &dbname, const std::string &user, const std::string &password, const std::string &host, std::string port)
 {
     try
@@ -21,7 +15,7 @@ void Database::connect(const std::string &dbname, const std::string &user, const
             "dbname=" + dbname +
             " user=" + user +
             " password=" + password +
-            " host=" + host +
+            " host=/cloudsql/" + host +
             " port=" + port;
 
         for (size_t i = 0; i < 10; ++i)
@@ -33,21 +27,17 @@ void Database::connect(const std::string &dbname, const std::string &user, const
 
     catch (std::exception &e)
     {
-        std::cout << e.what() << std::endl;
         throw;
     }
 }
 
-/**
- * Fetches all blocks
- */
-std::optional<json> Database::fetchAllBlocks()
-{
-    auto conn = this->GetConnection();
+
+std::optional<json> Database::fetchAllBlocks() {
 
     try
     {
-        transaction tx(*conn.get());
+        ManagedConnection conn(*this);
+        transaction tx(*conn);
         auto result = tx.exec("SELECT * FROM blocks");
         json retVal({});
 
@@ -65,30 +55,23 @@ std::optional<json> Database::fetchAllBlocks()
         // Convert blocks to json array
         retVal = jsonBlocksVec;
 
-        this->ReleaseConnection(std::move(conn));
         return retVal;
     }
     catch (std::exception &e)
     {
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
 
-/**
- * Fetch all transactions
- */
 json Database::fetchAllTransactions()
 {
-    auto conn = this->GetConnection();
-
     try
 
     {
+        ManagedConnection conn(*this);
         json retVal{{}};
         transaction tx(*conn);
         auto result = tx.exec("SELECT * FROM transactions");
-        this->ReleaseConnection(std::move(conn));
         if (result.empty())
         {
             return retVal;
@@ -106,12 +89,10 @@ json Database::fetchAllTransactions()
     }
     catch (std::exception &e)
     {
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
 
-// Fetch blocks with pagination
 std::optional<json> Database::fetchPaginatedBlocks(int page, int limit, bool reverseOrder)
 {
 
@@ -160,11 +141,10 @@ std::optional<json> Database::fetchPaginatedBlocks(int page, int limit, bool rev
                 std::to_string(limit) + " OFFSET " + std::to_string(offsetForForward);
     }
 
-    auto conn = this->GetConnection();
-
     try
     {
-        transaction tx(*conn.get());
+        ManagedConnection conn(*this);
+        transaction tx(*conn);
         auto result = tx.exec(query);
 
         if (result.empty())
@@ -184,14 +164,10 @@ std::optional<json> Database::fetchPaginatedBlocks(int page, int limit, bool rev
         retVal["totalCount"] = totalBlockCount;
         retVal["totalPages"] = std::ceil(static_cast<double>(totalBlockCount) / limit);
 
-        this->ReleaseConnection(std::move(conn));
-
         return retVal;
     }
     catch (std::exception &e)
     {
-
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
@@ -242,10 +218,10 @@ std::optional<json> Database::fetchPaginatedTransactions(int page, int limit, bo
                 std::to_string(limit) + " OFFSET " + std::to_string(offsetForForward);
     }
 
-    auto conn = this->GetConnection();
 
     try
     {
+        ManagedConnection conn(*this);
         transaction tx(*conn);
         auto result = tx.exec(query);
 
@@ -261,24 +237,19 @@ std::optional<json> Database::fetchPaginatedTransactions(int page, int limit, bo
         retVal["totalCount"] = totalTransactionsCount;
         retVal["totalPages"] = std::ceil(static_cast<double>(totalTransactionsCount) / limit);
 
-        this->ReleaseConnection(std::move(conn));
-
         return retVal;
     }
     catch (std::exception &e)
     {
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
 
-// Function to fetch the total count of records from the Transactions table.
 std::optional<uint64_t> Database::fetchTotalTransactionCount()
 {
-    auto conn = this->GetConnection();
-
     try
     {
+        ManagedConnection conn(*this);
         transaction tx(*conn);
         auto result = tx.exec("SELECT COUNT(*) FROM transactions");
 
@@ -290,49 +261,44 @@ std::optional<uint64_t> Database::fetchTotalTransactionCount()
 
         retVal = result[0][0].as<uint64_t>();
 
-        this->ReleaseConnection(std::move(conn));
         return retVal;
     }
     catch (std::exception &e)
     {
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
 
 std::optional<uint64_t> Database::getMostRecentTransactionTimestamp()
 {
-    auto conn = this->GetConnection();
+
 
     try
     {
+        ManagedConnection conn(*this);
         transaction tx(*conn);
         auto result = tx.exec("SELECT MAX(timestamp) FROM transactions");
 
         if (result.empty() || result[0][0].is_null())
         {
-            this->ReleaseConnection(std::move(conn));
             return std::nullopt;
         }
 
-        this->ReleaseConnection(std::move(conn));
         uint64_t mostRecentTimestamp = result[0][0].as<uint64_t>();
 
         return mostRecentTimestamp;
     }
     catch (std::exception &e)
     {
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
 
-// Function to fetch the total count of records from the Blocks table.
 std::optional<uint64_t> Database::fetchTotalBlocksCount()
 {
-    auto conn = this->GetConnection();
     try
     {
+        ManagedConnection conn(*this);
         transaction tx(*conn);
         auto result = tx.exec("SELECT COUNT(*) FROM blocks");
 
@@ -344,28 +310,24 @@ std::optional<uint64_t> Database::fetchTotalBlocksCount()
 
         retVal = result[0][0].as<uint64_t>();
 
-        this->ReleaseConnection(std::move(conn));
-
         return retVal;
     }
     catch (std::exception &e)
     {
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
 
 std::optional<json> Database::fetchBlockByHash(const std::string &block_hash)
 {
-    auto conn = this->GetConnection();
 
     try
     {
+        ManagedConnection conn(*this);
         transaction txn(*conn);
         std::string query = "SELECT * FROM blocks WHERE hash = " + txn.quote(block_hash);
         auto result = txn.exec(query);
         json retVal{{}};
-        this->ReleaseConnection(std::move(conn));
 
         if (result.empty())
         {
@@ -376,22 +338,19 @@ std::optional<json> Database::fetchBlockByHash(const std::string &block_hash)
     }
     catch (const std::exception &e)
     {
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
 
 std::optional<json> Database::fetchTransactionByHash(const std::string &transaction_hash)
 {
-    auto conn = this->GetConnection();
-
     try
     {
+        ManagedConnection conn(*this);
         transaction txn(*conn);
         std::string query = "SELECT * FROM transactions WHERE tx_id = " + txn.quote(transaction_hash);
         auto result = txn.exec(query);
         json retVal{{}};
-        this->ReleaseConnection(std::move(conn));
 
         if (!result.empty())
         {
@@ -402,22 +361,20 @@ std::optional<json> Database::fetchTransactionByHash(const std::string &transact
     }
     catch (const std::exception &e)
     {
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
 
 std::optional<json> Database::fetchTransparentOutputsRelatedToTransactionId(const std::string &transaction_id)
 {
-    auto conn = this->GetConnection();
 
     try
     {
+        ManagedConnection conn(*this);
         transaction tx(*conn);
         std::string query = "SELECT * FROM transparent_outputs WHERE tx_id = $1";
         auto result = tx.exec_params(query, transaction_id);
         json retVal{{}};
-        this->ReleaseConnection(std::move(conn));
 
         if (result.empty())
         {
@@ -435,22 +392,19 @@ std::optional<json> Database::fetchTransparentOutputsRelatedToTransactionId(cons
     }
     catch (const std::exception &e)
     {
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
 
 std::optional<json> Database::fetchTransparentInputsRelatedToTransactionId(const std::string &transaction_id)
 {
-    auto conn = this->GetConnection();
-
     try
     {
+        ManagedConnection conn(*this);
         transaction tx(*conn);
         std::string query = "SELECT * FROM transparent_inputs WHERE tx_id = $1";
         auto result = tx.exec_params(query, transaction_id);
         json retVal{{}};
-        this->ReleaseConnection(std::move(conn));
 
         if (result.empty())
         {
@@ -468,7 +422,6 @@ std::optional<json> Database::fetchTransparentInputsRelatedToTransactionId(const
     }
     catch (const std::exception &e)
     {
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
@@ -481,10 +434,9 @@ std::optional<json> Database::fetchTransactionsDetailsFromIds(const std::vector<
         return retVal;
     }
 
-    auto conn = this->GetConnection();
-
     try
     {
+        ManagedConnection conn(*this);
         transaction tx(*conn);
         std::string query{""};
         pqxx::result res;
@@ -503,29 +455,25 @@ std::optional<json> Database::fetchTransactionsDetailsFromIds(const std::vector<
                 }
             }
         }
-        this->ReleaseConnection(std::move(conn));
 
         retVal = transaction_details;
         return retVal;
     }
     catch (const std::exception &e)
     {
-        this->ReleaseConnection(std::move(conn));
         throw;
     }
 }
 
 std::optional<json> Database::fetchPeerInfo()
 {
-    auto connection = this->GetConnection();
-
     try
     {
+        ManagedConnection connection(*this);
         json retVal{{}};
-        transaction tx{*connection.get()};
+        transaction tx{*connection};
         auto result = tx.exec("SELECT * FROM peerinfo");
         std::vector<json> peer_info_list{result.size()};
-        this->ReleaseConnection(std::move(connection));
 
         if (result.empty())
         {
@@ -543,22 +491,20 @@ std::optional<json> Database::fetchPeerInfo()
     }
     catch (const std::exception &e)
     {
-        this->ReleaseConnection(std::move(connection));
         throw;
     }
 }
 
 std::optional<json> Database::fetchBlockchainInfo()
 {
-    std::unique_ptr<pqxx::connection> connection = this->GetConnection();
 
     try
     {
+        ManagedConnection connection(*this);
         json retVal{{}};
-        transaction tx(*connection.get());
+        transaction tx(*connection);
 
         auto result = tx.exec("SELECT * FROM chain_info");
-        this->ReleaseConnection(std::move(connection));
 
         if (result.empty())
         {
@@ -569,7 +515,6 @@ std::optional<json> Database::fetchBlockchainInfo()
     }
     catch (const std::exception &e)
     {
-        this->ReleaseConnection(std::move(connection));
         throw;
     }
 }
@@ -577,23 +522,21 @@ std::optional<json> Database::fetchBlockchainInfo()
 std::optional<json> Database::directSearch(const std::string &pattern)
 {
 
-    if (!ChainUtils::isValidSHA256Hash(pattern))
+    if (!isValidSHA256Hash(pattern))
     {
         throw std::runtime_error("Invalid request for pattern " + pattern + ".");
     }
-
-    auto conn = this->GetConnection();
 
     const std::string preparedStmt{"direct_search_query"};
 
     try
     {
-        transaction tx{*conn.get()};
+        ManagedConnection connection(*this);
+        transaction tx{*connection};
 
-        conn->prepare(preparedStmt, "SELECT 'transactions' AS source_table, tx_id AS identifier FROM transactions WHERE tx_id = $1 UNION ALL SELECT 'blocks', hash FROM blocks WHERE hash = $1");
+        connection->prepare(preparedStmt, "SELECT 'transactions' AS source_table, tx_id AS identifier FROM transactions WHERE tx_id = $1 UNION ALL SELECT 'blocks', hash FROM blocks WHERE hash = $1");
 
         auto result = tx.exec_prepared(preparedStmt, pattern);
-        this->ReleaseConnection(std::move(conn));
 
         if (result.empty())
         {
@@ -604,27 +547,23 @@ std::optional<json> Database::directSearch(const std::string &pattern)
     }
     catch (const std::exception &e)
     {
-        std::cout << e.what() << std::endl;
         throw;
     }
 }
 
 std::optional<json> Database::fetchTransactionInPeriod(uint64_t startTimestamp, uint64_t a)
 {
-    std::unique_ptr<pqxx::connection> connection = this->GetConnection();
-
     try
     {
+        ManagedConnection connection(*this);
         // Calculate end timestamp
         uint64_t endTimestamp = startTimestamp + (14 * 24 * 60 * 60); // 14 days in seconds
 
         // Execute the SQL query to get transactions within the specified period
-        transaction tx(*connection.get());
+        transaction tx(*connection);
         auto result = tx.exec("SELECT * FROM transactions WHERE timestamp >= " +
                               std::to_string(startTimestamp) + " AND timestamp <= " +
                               std::to_string(endTimestamp));
-
-        this->ReleaseConnection(std::move(connection));
 
         if (result.empty())
         {
@@ -655,7 +594,6 @@ std::optional<json> Database::fetchTransactionInPeriod(uint64_t startTimestamp, 
     }
     catch (const std::exception &e)
     {
-        this->ReleaseConnection(std::move(connection));
         throw;
     }
 }

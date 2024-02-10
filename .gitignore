@@ -1,3 +1,4 @@
 *.dYSM
 .vscode
 zcash-api
+*.o
