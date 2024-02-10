@@ -7,6 +7,8 @@
 #ifndef DB_CPP
 #define DB_CPP
 
+const uint8_t Database::connection_pool_size = 10;
+
 void Database::connect(const std::string &dbname, const std::string &user, const std::string &password, const std::string &host, std::string port)
 {
     try
@@ -18,7 +20,7 @@ void Database::connect(const std::string &dbname, const std::string &user, const
             " host=/cloudsql/" + host +
             " port=" + port;
 
-        for (size_t i = 0; i < 10; ++i)
+        for (size_t i = 0; i < Database::connection_pool_size; ++i)
         {
             auto conn = std::make_unique<pqxx::connection>(connection_string);
             connectionPool.push(std::move(conn));

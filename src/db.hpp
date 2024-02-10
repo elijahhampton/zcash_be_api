@@ -7,6 +7,7 @@
 #include "nlohmann/json.hpp"
 #include <memory>
 #include <fstream>
+#include "config.h"
 #include <cstdint>
 #include <optional>
 #include "../include/crow_all.h"
@@ -22,6 +23,8 @@ struct ManagedConnection;
 class Database
 {
     friend struct ManagedConnection;
+
+    const static uint8_t connection_pool_size;
 
 public:
     /**
