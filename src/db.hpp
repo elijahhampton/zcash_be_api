@@ -14,7 +14,7 @@
 using json = nlohmann::json;
 using transaction = pqxx::work;
 
-class ManagedConnection;
+struct ManagedConnection;
 
 /**
  * @brief Database class for handling interactions with a PostgreSQL database.
@@ -191,7 +191,9 @@ private:
 struct ManagedConnection
 {
 public:
-    ManagedConnection(Database &db_) : db(db_), conn(db_.GetConnection()) {}
+    ManagedConnection(Database &db_) : db(db_), conn(db_.GetConnection()) {
+         std::lock_guard<std::mutex> lock(db_.cs_pool_mutex);
+    }
     ~ManagedConnection()
     {
         db.ReleaseConnection(std::move(conn));

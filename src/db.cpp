@@ -32,8 +32,8 @@ void Database::connect(const std::string &dbname, const std::string &user, const
 }
 
 
-std::optional<json> Database::fetchAllBlocks() {
-
+std::optional<json> Database::fetchAllBlocks() 
+{
     try
     {
         ManagedConnection conn(*this);
@@ -66,7 +66,6 @@ std::optional<json> Database::fetchAllBlocks() {
 json Database::fetchAllTransactions()
 {
     try
-
     {
         ManagedConnection conn(*this);
         json retVal{{}};
@@ -271,8 +270,6 @@ std::optional<uint64_t> Database::fetchTotalTransactionCount()
 
 std::optional<uint64_t> Database::getMostRecentTransactionTimestamp()
 {
-
-
     try
     {
         ManagedConnection conn(*this);
@@ -551,7 +548,7 @@ std::optional<json> Database::directSearch(const std::string &pattern)
     }
 }
 
-std::optional<json> Database::fetchTransactionInPeriod(uint64_t startTimestamp, uint64_t a)
+std::optional<json> Database::fetchTransactionInPeriod(uint64_t startTimestamp, uint64_t _endTimestamp)
 {
     try
     {
@@ -644,7 +641,12 @@ bool Database::ReleaseConnection(std::unique_ptr<pqxx::connection> conn)
 
 void Database::ShutdownConnections()
 {
-    // TODO
+    while (!connectionPool.empty()) {
+        std::unique_ptr<pqxx::connection> conn = std::move(connectionPool.front());
+        conn.reset();
+
+        connectionPool.pop();
+    }
 }
 
 #endif // DB_CPP
